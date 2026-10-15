@@ -42,6 +42,154 @@ a {
   max-width: 1100px;
 }
 
+.admin-page-full {
+  max-width: none;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  min-height: 100vh;
+}
+
+.admin-split {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+.admin-split-map {
+  flex: 0 0 70%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.admin-split-panel {
+  flex: 0 0 calc(30% - 12px);
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: 0 8px 24px rgba(15, 61, 46, 0.06);
+}
+
+.map-wrap-fill {
+  flex: 1;
+  min-height: 280px;
+  height: auto;
+  margin-bottom: 0;
+}
+
+.map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 8px;
+}
+
+.toggle-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.toggle-inline input {
+  width: auto;
+  margin: 0;
+}
+
+.panel-block {
+  margin-bottom: 16px;
+}
+
+.panel-block h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.photo-list-panel {
+  max-height: none;
+}
+
+.feed-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feed-item {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.feed-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.feed-item img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--bg-accent);
+}
+
+.feed-title {
+  font-weight: 600;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-size: 0.88rem;
+}
+
+.map-empty-msg {
+  padding: 24px;
+  text-align: center;
+}
+
+.admin-settings {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 900px) {
+  .admin-page-full {
+    height: auto;
+  }
+
+  .admin-split {
+    flex-direction: column;
+  }
+
+  .admin-split-map,
+  .admin-split-panel {
+    flex: 1 1 auto;
+  }
+
+  .map-wrap-fill {
+    height: min(50vh, 420px);
+  }
+}
+
 .center {
   min-height: 100vh;
   display: grid;
@@ -251,6 +399,24 @@ button.ghost {
   overflow: hidden;
   border: 1px solid var(--line);
   margin-bottom: 14px;
+}
+
+.map-wrap-worker {
+  position: relative;
+  height: min(40vh, 320px);
+}
+
+.map-overlay-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  background: rgba(15, 61, 46, 0.85);
+  color: #e8f5ef;
+  pointer-events: none;
 }
 
 .map {

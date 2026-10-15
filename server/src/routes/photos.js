@@ -74,14 +74,35 @@ router.get('/mine', requireAuth, (req, res) => {
   res.json({ photos });
 });
 
+router.get('/recent', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100);
+  const uploads = db
+    .prepare(
+      `SELECT p.id, p.filename, p.latitude, p.longitude, p.comment, p.created_at,
+              u.id AS user_id, u.username, u.employee_id
+       FROM photos p
+       JOIN users u ON u.id = p.user_id
+       ORDER BY p.created_at DESC
+       LIMIT ?`
+    )
+    .all(limit);
+  res.json({ uploads });
+});
+
 router.get('/user/:userId', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const userId = Number(req.params.userId);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+  const worker = db
+    .prepare(`SELECT id, username, employee_id FROM users WHERE id = ?`)
+    .get(userId);
+  if (!worker) return res.status(404).json({ error: 'User not found' });
   const photos = db
     .prepare(
       `SELECT id, filename, latitude, longitude, comment, created_at
-       FROM photos WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`
+       FROM photos WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`
     )
-    .all(Number(req.params.userId));
-  res.json({ photos });
+    .all(userId, limit);
+  res.json({ worker, photos });
 });
 
 export default router;

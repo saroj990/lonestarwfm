@@ -16,6 +16,11 @@ router.post('/', requireAuth, (req, res) => {
     latitude,
     longitude
   );
+
+  console.log(
+    `[GPS] ${req.user.username} (${req.user.employee_id}) → ${latitude},${longitude}`
+  );
+
   res.status(201).json({ ok: true });
 });
 
@@ -43,19 +48,58 @@ router.get('/latest', requireAuth, requireRole('admin', 'manager'), (_req, res) 
   res.json({ markers });
 });
 
+function getSetting(key, fallback) {
+  const row = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key);
+  return Number(row?.value ?? fallback);
+}
+
+router.get('/user/:userId/history', requireAuth, requireRole('admin', 'manager'), (req, res) => {
+  const userId = Number(req.params.userId);
+  const days = Math.min(Math.max(Number(req.query.days) || 1, 1), 30);
+  const points = db
+    .prepare(
+      `SELECT latitude, longitude, created_at
+       FROM locations
+       WHERE user_id = ? AND created_at >= datetime('now', ?)
+       ORDER BY created_at ASC`
+    )
+    .all(userId, `-${days} days`);
+  res.json({ points });
+});
+
 router.get('/settings', requireAuth, (_req, res) => {
-  const row = db.prepare(`SELECT value FROM settings WHERE key = 'gps_interval_minutes'`).get();
-  res.json({ gps_interval_minutes: Number(row?.value || 10) });
+  res.json({
+    gps_interval_minutes: getSetting('gps_interval_minutes', 10),
+    dashboard_refresh_minutes: getSetting('dashboard_refresh_minutes', 5),
+  });
 });
 
 router.put('/settings', requireAuth, requireRole('admin'), (req, res) => {
-  const minutes = Number(req.body.gps_interval_minutes);
-  if (!minutes || minutes < 1) {
-    return res.status(400).json({ error: 'gps_interval_minutes must be >= 1' });
+  const upsert = db.prepare(
+    `INSERT INTO settings (key, value) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  );
+
+  if (req.body.gps_interval_minutes != null) {
+    const minutes = Number(req.body.gps_interval_minutes);
+    if (!minutes || minutes < 1) {
+      return res.status(400).json({ error: 'gps_interval_minutes must be >= 1' });
+    }
+    upsert.run('gps_interval_minutes', String(minutes));
   }
-  db.prepare(`INSERT INTO settings (key, value) VALUES ('gps_interval_minutes', ?)
-              ON CONFLICT(key) DO UPDATE SET value = excluded.value`).run(String(minutes));
-  res.json({ gps_interval_minutes: minutes });
+
+  if (req.body.dashboard_refresh_minutes != null) {
+    const refresh = Number(req.body.dashboard_refresh_minutes);
+    if (!refresh || refresh < 1) {
+      return res.status(400).json({ error: 'dashboard_refresh_minutes must be >= 1' });
+    }
+    upsert.run('dashboard_refresh_minutes', String(refresh));
+  }
+
+  res.json({
+    gps_interval_minutes: getSetting('gps_interval_minutes', 10),
+    dashboard_refresh_minutes: getSetting('dashboard_refresh_minutes', 5),
+  });
 });
 
 export default router;

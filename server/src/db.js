@@ -54,6 +54,7 @@ db.exec(`
   );
 
   INSERT OR IGNORE INTO settings (key, value) VALUES ('gps_interval_minutes', '10');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('dashboard_refresh_minutes', '5');
 `);
 
 export { db, uploadDir };

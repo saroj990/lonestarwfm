@@ -1,7 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
+import { MapContainer, Marker, TileLayer } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../auth';
 import { api } from '../api';
 import { useGpsPing } from '../hooks/useGpsPing';
+import { FocusOnLocation } from '../components/MapHelpers';
+
+const workerMarkerIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const DEFAULT_MAP_CENTER = [25.2048, 55.2708];
 
 function cameraErrorMessage(err) {
   if (!window.isSecureContext) {
@@ -42,6 +58,7 @@ export default function WorkerPage() {
   useGpsPing(true);
 
   useEffect(() => {
+    refreshLocation();
     api('/api/photos/mine')
       .then(({ photos }) => setPhotos(photos))
       .catch(() => {});
@@ -201,6 +218,32 @@ export default function WorkerPage() {
         </button>
       </header>
 
+      <section className="map-wrap map-wrap-worker">
+        <MapContainer
+          center={coords ? [coords.latitude, coords.longitude] : DEFAULT_MAP_CENTER}
+          zoom={coords ? 16 : 4}
+          className="map"
+          scrollWheelZoom
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {coords && (
+            <>
+              <FocusOnLocation latitude={coords.latitude} longitude={coords.longitude} />
+              <Marker
+                position={[coords.latitude, coords.longitude]}
+                icon={workerMarkerIcon}
+              />
+            </>
+          )}
+        </MapContainer>
+        {!coords && (
+          <p className="muted map-overlay-hint">Allow location to center the map on you.</p>
+        )}
+      </section>
+
       <section className="card">
         <h2>Upload check-in</h2>
         {error && <div className="error">{error}</div>}
@@ -278,7 +321,9 @@ export default function WorkerPage() {
           {busy ? 'Uploading…' : 'Upload photo'}
         </button>
         <p className="muted small">
-          Device location is also sent every configured GPS interval (default 10 min).
+          While this tab is open and visible, your location is sent on the admin-configured
+          interval (default 10 min). Pings stop when you leave this page, hide the tab, or close
+          the browser.
         </p>
       </section>
 

@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import WorkerPage from './pages/WorkerPage';
 import AdminMapPage from './pages/AdminMapPage';
+import AdminWorkerPage from './pages/AdminWorkerPage';
 
 function Protected({ children, roles }) {
   const { user, loading } = useAuth();
@@ -46,6 +47,14 @@ export default function App() {
         element={
           <Protected roles={['admin', 'manager']}>
             <AdminMapPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/admin/worker/:userId"
+        element={
+          <Protected roles={['admin', 'manager']}>
+            <AdminWorkerPage />
           </Protected>
         }
       />
