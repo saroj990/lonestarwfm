@@ -10,10 +10,12 @@ Mobile-first workforce check-in web app with worker photo/GPS upload and admin m
 
 ## Quick start
 
+Requires [pnpm](https://pnpm.io/installation) (or enable via Corepack: `corepack enable`).
+
 ```bash
-npm run install:all
-npm run seed
-npm run dev
+pnpm install
+pnpm seed
+pnpm dev
 ```
 
 - Web: http://localhost:5173

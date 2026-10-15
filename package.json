@@ -2,10 +2,11 @@
   "name": "lonestar-wfm",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.5.2",
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
-    "seed": "npm run seed --prefix server"
+    "dev": "concurrently \"pnpm -C server dev\" \"pnpm -C client dev\"",
+    "install:all": "pnpm install",
+    "seed": "pnpm -C server seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
