@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import WorkerPage from './pages/WorkerPage';
 import AdminMapPage from './pages/AdminMapPage';
 import AdminWorkerPage from './pages/AdminWorkerPage';
+import { AdminShell } from './components/AdminShell';
 
 function Protected({ children, roles }) {
   const { user, loading } = useAuth();
@@ -46,7 +47,9 @@ export default function App() {
         path="/admin"
         element={
           <Protected roles={['admin', 'manager']}>
-            <AdminMapPage />
+            <AdminShell>
+              <AdminMapPage />
+            </AdminShell>
           </Protected>
         }
       />
@@ -54,7 +57,9 @@ export default function App() {
         path="/admin/worker/:userId"
         element={
           <Protected roles={['admin', 'manager']}>
-            <AdminWorkerPage />
+            <AdminShell>
+              <AdminWorkerPage />
+            </AdminShell>
           </Protected>
         }
       />

@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "seed:demo": "node src/seed-demo.js",
+    "seed:truncate": "node src/truncate-db.js",
+    "seed:fresh": "node src/seed-fresh.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

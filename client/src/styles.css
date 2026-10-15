@@ -156,6 +156,26 @@ a {
   font-weight: 600;
 }
 
+.region-filter {
+  margin-bottom: 10px;
+}
+
+.region-filter select {
+  width: 100%;
+}
+
+.region-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--bg-accent);
+  color: var(--brand);
+  vertical-align: middle;
+}
+
 .back-link {
   display: inline-block;
   margin-bottom: 4px;
@@ -185,8 +205,9 @@ a {
     flex: 1 1 auto;
   }
 
-  .map-wrap-fill {
-    height: min(50vh, 420px);
+  .map-wrap.map-wrap-fill {
+    flex: none;
+    height: min(55vh, 460px);
   }
 }
 

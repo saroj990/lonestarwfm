@@ -1,27 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { Popup } from 'react-map-gl/maplibre';
+import AppMap, { FitToPoints, Pin, TrailLine } from '../components/AppMap';
+import { useTheme } from '../theme';
 import { useAuth } from '../auth';
 import { api } from '../api';
-import { FitToPoints } from '../components/MapHelpers';
-import { markerIcon, photoMarkerIcon } from '../mapIcons';
+import AdminHeader from '../components/AdminHeader';
+import { formatDateShort, formatDateTimeAmPm, formatTimeAmPm } from '../formatDateTime';
 
-const DEFAULT_CENTER = [25.2048, 55.2708];
-
-function formatTime(iso) {
-  return new Date(iso + 'Z').toLocaleString();
-}
+const DEFAULT_CENTER = [24.4672, 39.6112];
 
 export default function AdminWorkerPage() {
   const { userId } = useParams();
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
+  const trailColor = theme === 'dark' ? '#ffffff' : '#111111';
+  const historyColor = theme === 'dark' ? '#a3a3a3' : '#525252';
   const [worker, setWorker] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [history, setHistory] = useState([]);
   const [showMovementHistory, setShowMovementHistory] = useState(false);
   const [error, setError] = useState('');
   const [fitKey, setFitKey] = useState(0);
+  const [popup, setPopup] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,16 +63,6 @@ export default function AdminWorkerPage() {
     [photos]
   );
 
-  const photoLine = useMemo(
-    () => photosAsc.map((p) => [p.latitude, p.longitude]),
-    [photosAsc]
-  );
-
-  const historyLine = useMemo(
-    () => history.map((p) => [p.latitude, p.longitude]),
-    [history]
-  );
-
   const mapPoints = useMemo(() => {
     if (showMovementHistory && history.length) return history;
     if (photosAsc.length) return photosAsc;
@@ -91,27 +82,24 @@ export default function AdminWorkerPage() {
 
   return (
     <div className="page admin-page admin-page-full">
-      <header className="topbar">
-        <div>
+      <AdminHeader
+        user={user}
+        title={`${displayName}`}
+        subtitle={`${employeeId} · Work status & movement`}
+        onLogout={logout}
+        backLink={
           <Link to="/admin" className="back-link">
             ← Dashboard
           </Link>
-          <strong>
-            {displayName} · {employeeId}
-          </strong>
-          <div className="muted small">Work status · photo trail & movement</div>
-        </div>
-        <div className="row">
-          <button className="ghost" onClick={() => setFitKey((k) => k + 1)}>
+        }
+        extraActions={
+          <button type="button" className="btn-admin secondary" onClick={() => setFitKey((k) => k + 1)}>
             Fit map
           </button>
-          <button className="ghost" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </header>
+        }
+      />
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error admin-error">{error}</div>}
 
       <div className="admin-split">
         <section className="admin-split-map">
@@ -122,6 +110,7 @@ export default function AdminWorkerPage() {
                 checked={showMovementHistory}
                 onChange={(e) => {
                   setShowMovementHistory(e.target.checked);
+                  setPopup(null);
                   setFitKey((k) => k + 1);
                 }}
               />
@@ -133,103 +122,123 @@ export default function AdminWorkerPage() {
                 : `${photosAsc.length} upload marker(s) · dotted = check-in trail`}
             </span>
           </div>
-          <div className="map-wrap map-wrap-fill">
-            <MapContainer center={center} zoom={13} className="map" scrollWheelZoom>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+          <div className="map-wrap map-wrap-fill map-wrap-admin">
+            <AppMap center={center} zoom={13}>
               <FitToPoints points={mapPoints} fitKey={fitKey} />
 
-              {!showMovementHistory && photoLine.length > 1 && (
-                <Polyline
-                  positions={photoLine}
-                  pathOptions={{ color: '#1f6b4f', weight: 3, dashArray: '10 8' }}
-                />
-              )}
-
-              {showMovementHistory && historyLine.length > 1 && (
-                <Polyline
-                  positions={historyLine}
-                  pathOptions={{ color: '#2563eb', weight: 3, dashArray: '6 6' }}
-                />
+              {showMovementHistory ? (
+                <TrailLine key="history-trail" id="history-trail" points={history} color={historyColor} dash={[2, 2]} />
+              ) : (
+                <TrailLine key="photo-trail" id="photo-trail" points={photosAsc} color={trailColor} dash={[3, 2.5]} />
               )}
 
               {!showMovementHistory &&
                 photosAsc.map((p) => (
-                  <Marker
+                  <Pin
                     key={p.id}
-                    position={[p.latitude, p.longitude]}
-                    icon={photoMarkerIcon}
-                  >
-                    <Popup>
-                      Upload · {formatTime(p.created_at)}
-                      {p.comment && (
-                        <>
-                          <br />
-                          {p.comment}
-                        </>
-                      )}
-                    </Popup>
-                  </Marker>
+                    latitude={p.latitude}
+                    longitude={p.longitude}
+                    variant="photo"
+                    label="Photo upload"
+                    onClick={() =>
+                      setPopup({ ...p, title: `Upload · ${formatDateTimeAmPm(p.created_at)}`, offset: 30 })
+                    }
+                  />
                 ))}
 
               {showMovementHistory &&
                 history.map((p, i) => (
-                  <Marker
+                  <Pin
                     key={`${p.created_at}-${i}`}
-                    position={[p.latitude, p.longitude]}
-                    icon={markerIcon}
-                  >
-                    <Popup>GPS · {formatTime(p.created_at)}</Popup>
-                  </Marker>
+                    latitude={p.latitude}
+                    longitude={p.longitude}
+                    variant="ping"
+                    label="GPS ping"
+                    onClick={() =>
+                      setPopup({ ...p, title: `GPS · ${formatDateTimeAmPm(p.created_at)}`, offset: 10 })
+                    }
+                  />
                 ))}
 
               {!showMovementHistory && worker?.latitude != null && photosAsc.length === 0 && (
-                <Marker
-                  position={[worker.latitude, worker.longitude]}
-                  icon={markerIcon}
-                >
-                  <Popup>Last live GPS · {formatTime(worker.location_at)}</Popup>
-                </Marker>
+                <Pin
+                  latitude={worker.latitude}
+                  longitude={worker.longitude}
+                  label="Last live GPS"
+                  onClick={() =>
+                    setPopup({
+                      ...worker,
+                      title: `Last live GPS · ${formatDateTimeAmPm(worker.location_at)}`,
+                      offset: 34,
+                    })
+                  }
+                />
               )}
-            </MapContainer>
+
+              {popup && (
+                <Popup
+                  latitude={popup.latitude}
+                  longitude={popup.longitude}
+                  offset={popup.offset}
+                  onClose={() => setPopup(null)}
+                >
+                  {popup.title}
+                  {popup.comment && (
+                    <>
+                      <br />
+                      {popup.comment}
+                    </>
+                  )}
+                </Popup>
+              )}
+            </AppMap>
           </div>
         </section>
 
         <aside className="admin-split-panel">
           <div className="panel-block">
-            <h3>Work status</h3>
+            <h3 className="panel-title">Work status</h3>
             {worker?.location_at && (
-              <p className="small">
-                Last live GPS: <strong>{formatTime(worker.location_at)}</strong>
+              <p className="status-line">
+                <span className="status-label">Last live GPS</span>
+                <span className="feed-datetime">
+                  <time className="feed-time">{formatTimeAmPm(worker.location_at)}</time>
+                  <span className="feed-date-sep">·</span>
+                  <span className="feed-date">{formatDateShort(worker.location_at)}</span>
+                </span>
               </p>
             )}
             {worker?.last_photo_at ? (
-              <p className="small">
-                Last photo upload: <strong>{formatTime(worker.last_photo_at)}</strong>
+              <p className="status-line">
+                <span className="status-label">Last photo</span>
+                <span className="feed-datetime">
+                  <time className="feed-time">{formatTimeAmPm(worker.last_photo_at)}</time>
+                  <span className="feed-date-sep">·</span>
+                  <span className="feed-date">{formatDateShort(worker.last_photo_at)}</span>
+                </span>
               </p>
             ) : (
               <p className="muted small">No photo uploads yet.</p>
             )}
-            <p className="muted small">
-              Logged in as {user.username} ({user.employee_type})
-            </p>
           </div>
 
           <div className="panel-block">
-            <h3>Uploaded photos</h3>
+            <h3 className="panel-title">Uploaded photos</h3>
             {photos.length === 0 && <p className="muted">No photos for this worker.</p>}
-            <ul className="photo-list photo-list-panel">
+            <ul className="photo-list photo-list-panel photo-list-admin">
               {photos.map((p) => (
                 <li key={p.id}>
                   <img src={`/uploads/${p.filename}`} alt="" />
                   <div>
-                    <div>{formatTime(p.created_at)}</div>
-                    <div className="muted small">
+                    <div className="feed-datetime">
+                      <time className="feed-time">{formatTimeAmPm(p.created_at)}</time>
+                      <span className="feed-date-sep">·</span>
+                      <span className="feed-date">{formatDateShort(p.created_at)}</span>
+                    </div>
+                    <div className="muted small mono">
                       {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
                     </div>
-                    {p.comment && <div className="small">{p.comment}</div>}
+                    {p.comment && <div className="feed-comment">{p.comment}</div>}
                   </div>
                 </li>
               ))}

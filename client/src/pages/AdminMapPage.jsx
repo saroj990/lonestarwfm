@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { REGION_FILTERS, matchesRegionFilter } from '../adminRegions';
 import { Link } from 'react-router-dom';
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { Popup } from 'react-map-gl/maplibre';
+import AppMap, { FitToPoints, Pin } from '../components/AppMap';
 import { useAuth } from '../auth';
 import { api } from '../api';
-import { FitAllMarkers } from '../components/MapHelpers';
-import { markerIcon } from '../mapIcons';
+import AdminHeader from '../components/AdminHeader';
+import AdminSettingsPanel from '../components/AdminSettingsPanel';
+import FeedActivityRow from '../components/FeedActivityRow';
+import { formatClock, formatDateTimeAmPm } from '../formatDateTime';
 
-const DEFAULT_CENTER = [25.2048, 55.2708];
-
-function formatTime(iso) {
-  if (!iso) return '—';
-  return new Date(iso + 'Z').toLocaleString();
-}
+const DEFAULT_CENTER = [24.4672, 39.6112];
 
 export default function AdminMapPage() {
   const { user, logout } = useAuth();
@@ -23,6 +21,20 @@ export default function AdminMapPage() {
   const [refreshMins, setRefreshMins] = useState(5);
   const [fitKey, setFitKey] = useState(0);
   const [lastRefreshed, setLastRefreshed] = useState(null);
+  const [regionFilter, setRegionFilter] = useState('all');
+  const [selectedId, setSelectedId] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  const filteredMarkers = useMemo(
+    () => markers.filter((m) => matchesRegionFilter(m.username, regionFilter)),
+    [markers, regionFilter]
+  );
+
+  const filteredUploads = useMemo(
+    () => recentUploads.filter((u) => matchesRegionFilter(u.username, regionFilter)),
+    [recentUploads, regionFilter]
+  );
 
   const loadDashboard = useCallback(async ({ fit = false } = {}) => {
     try {
@@ -55,6 +67,10 @@ export default function AdminMapPage() {
     return () => clearInterval(t);
   }, [refreshMins, loadDashboard]);
 
+  useEffect(() => {
+    setFitKey((k) => k + 1);
+  }, [regionFilter]);
+
   async function saveSettings() {
     try {
       const data = await api('/api/locations/settings', {
@@ -66,133 +82,119 @@ export default function AdminMapPage() {
       });
       setGpsIntervalMins(data.gps_interval_minutes);
       setRefreshMins(data.dashboard_refresh_minutes);
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 2500);
     } catch (err) {
       setError(err.message);
     }
   }
 
+  const selected = filteredMarkers.find((m) => m.user_id === selectedId);
+
   const center =
-    markers.length > 0
-      ? [markers[0].latitude, markers[0].longitude]
+    filteredMarkers.length > 0
+      ? [filteredMarkers[0].latitude, filteredMarkers[0].longitude]
       : DEFAULT_CENTER;
+
+  const subtitle = `${filteredMarkers.length} worker(s) in view${
+    regionFilter !== 'all' ? ` · ${markers.length} total` : ''
+  }${lastRefreshed ? ` · Updated ${formatClock(lastRefreshed)}` : ''}`;
 
   return (
     <div className="page admin-page admin-page-full">
-      <header className="topbar">
-        <div>
-          <strong>GPS Dashboard</strong>
-          <div className="muted small">
-            {user.username} · {user.employee_type} · {markers.length} worker(s) on map
-            {lastRefreshed && (
-              <>
-                {' '}
-                · updated {lastRefreshed.toLocaleTimeString()}
-              </>
-            )}
-          </div>
-        </div>
-        <div className="row">
-          <button className="ghost" onClick={() => loadDashboard({ fit: true })}>
-            Refresh now
-          </button>
-          <button className="ghost" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </header>
+      <AdminHeader
+        user={user}
+        title="Location intelligence"
+        subtitle={subtitle}
+        onRefresh={() => loadDashboard({ fit: true })}
+        onOpenSettings={() => setSettingsOpen((o) => !o)}
+        settingsOpen={settingsOpen}
+        onLogout={logout}
+      />
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error admin-error">{error}</div>}
 
-      {user.employee_type === 'admin' && (
-        <section className="card compact admin-settings">
-          <label className="inline">
-            Worker GPS interval (min)
-            <input
-              type="number"
-              min="1"
-              value={gpsIntervalMins}
-              onChange={(e) => setGpsIntervalMins(e.target.value)}
-            />
-          </label>
-          <label className="inline">
-            Dashboard refresh (min)
-            <input
-              type="number"
-              min="1"
-              value={refreshMins}
-              onChange={(e) => setRefreshMins(e.target.value)}
-            />
-          </label>
-          <button type="button" className="ghost" onClick={saveSettings}>
-            Save
-          </button>
-        </section>
+      {settingsOpen && user.employee_type === 'admin' && (
+        <AdminSettingsPanel
+          gpsIntervalMins={gpsIntervalMins}
+          setGpsIntervalMins={setGpsIntervalMins}
+          refreshMins={refreshMins}
+          setRefreshMins={setRefreshMins}
+          onSave={saveSettings}
+          saved={settingsSaved}
+        />
       )}
 
       <div className="admin-split">
         <section className="admin-split-map">
-          <div className="map-wrap map-wrap-fill">
-            {markers.length === 0 ? (
+          <div className="map-wrap map-wrap-fill map-wrap-admin">
+            {filteredMarkers.length === 0 ? (
               <p className="muted map-empty-msg">
-                No worker locations yet. Workers need to open the app or upload a photo.
+                No workers in this region filter. Try another region or refresh.
               </p>
             ) : (
-              <MapContainer center={center} zoom={11} className="map" scrollWheelZoom>
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <FitAllMarkers markers={markers} fitKey={fitKey} />
-                {markers.map((m) => (
-                  <Marker
+              <AppMap center={center} zoom={11}>
+                <FitToPoints points={filteredMarkers} fitKey={fitKey} maxZoom={15} />
+                {filteredMarkers.map((m) => (
+                  <Pin
                     key={m.user_id}
-                    position={[m.latitude, m.longitude]}
-                    icon={markerIcon}
-                  >
-                    <Popup>
-                      <strong>{m.username}</strong>
-                      <br />
-                      {m.employee_id}
-                      <br />
-                      Live GPS: {formatTime(m.location_at)}
-                      <br />
-                      Last photo: {formatTime(m.last_photo_at)}
-                      <br />
-                      <Link to={`/admin/worker/${m.user_id}`}>View worker dashboard →</Link>
-                    </Popup>
-                  </Marker>
+                    latitude={m.latitude}
+                    longitude={m.longitude}
+                    label={m.username}
+                    onClick={() => setSelectedId(m.user_id)}
+                  />
                 ))}
-              </MapContainer>
+                {selected && (
+                  <Popup
+                    latitude={selected.latitude}
+                    longitude={selected.longitude}
+                    offset={34}
+                    onClose={() => setSelectedId(null)}
+                  >
+                    <strong>{selected.username}</strong>
+                    <br />
+                    {selected.employee_id}
+                    <br />
+                    Live GPS: {formatDateTimeAmPm(selected.location_at)}
+                    <br />
+                    Last photo: {formatDateTimeAmPm(selected.last_photo_at)}
+                    <br />
+                    <Link to={`/admin/worker/${selected.user_id}`}>View worker →</Link>
+                  </Popup>
+                )}
+              </AppMap>
             )}
           </div>
         </section>
 
         <aside className="admin-split-panel">
           <div className="panel-block">
-            <h3>Recent uploads</h3>
-            <p className="muted small">Newest first · auto-refresh every {refreshMins} min</p>
-            {recentUploads.length === 0 && (
-              <p className="muted">No uploads yet.</p>
+            <h3 className="panel-title">Activity feed</h3>
+            <label className="region-filter">
+              <span className="setting-label">Region filter</span>
+              <select
+                value={regionFilter}
+                onChange={(e) => setRegionFilter(e.target.value)}
+              >
+                {REGION_FILTERS.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="panel-caption">
+              Synced with map · auto-refresh every {refreshMins} min
+            </p>
+            {filteredUploads.length === 0 ? (
+              <p className="muted">No uploads in this region.</p>
+            ) : (
+              <ul className="feed-list">
+                {filteredUploads.map((u) => (
+                  <FeedActivityRow key={u.id} upload={u} />
+                ))}
+              </ul>
             )}
-            <ul className="feed-list">
-              {recentUploads.map((u) => (
-                <li key={u.id} className="feed-item">
-                  <img src={`/uploads/${u.filename}`} alt="" />
-                  <div>
-                    <div className="feed-title">
-                      <Link to={`/admin/worker/${u.user_id}`}>{u.username}</Link>
-                      <span className="muted small"> · {u.employee_id}</span>
-                    </div>
-                    <div className="small">{formatTime(u.created_at)}</div>
-                    {u.comment ? (
-                      <div className="small">{u.comment}</div>
-                    ) : (
-                      <div className="muted small">No comment</div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
           </div>
         </aside>
       </div>

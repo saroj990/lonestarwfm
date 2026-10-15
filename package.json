@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "concurrently \"pnpm -C server dev\" \"pnpm -C client dev\"",
     "install:all": "pnpm install",
-    "seed": "pnpm -C server seed"
+    "seed": "pnpm -C server seed",
+    "seed:demo": "pnpm -C server seed:demo",
+    "seed:fresh": "pnpm -C server seed:fresh"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
