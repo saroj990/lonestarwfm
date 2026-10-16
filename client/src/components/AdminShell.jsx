@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-/** Applies monochrome admin theme to the document while mounted. */
+/** Applies admin shell styling (panels, feed, map chrome) while mounted. */
 export function AdminShell({ children }) {
   useEffect(() => {
     document.body.classList.add('theme-admin');

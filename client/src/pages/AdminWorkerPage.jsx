@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import AppMap, { FitToPoints, Pin, TrailLine } from '../components/AppMap';
 import { useTheme } from '../theme';
 import { useAuth } from '../auth';
 import { api } from '../api';
 import AdminHeader from '../components/AdminHeader';
+import FeedActivityRow from '../components/FeedActivityRow';
 import PhotoLightbox from '../components/PhotoLightbox';
 import { CHECKIN_PHOTO_FALLBACK } from '../photoFallback';
-import { formatDateShort, formatDateTimeAmPm, formatTimeAmPm } from '../formatDateTime';
+import { formatClock, formatDateShort, formatDateTimeAmPm, formatTimeAmPm } from '../formatDateTime';
 
 const DEFAULT_CENTER = [24.4672, 39.6112];
 
@@ -15,8 +16,8 @@ export default function AdminWorkerPage() {
   const { userId } = useParams();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
-  const trailColor = theme === 'dark' ? '#ffffff' : '#111111';
-  const historyColor = theme === 'dark' ? '#a3a3a3' : '#525252';
+  const trailColor = theme === 'dark' ? '#60a5fa' : '#2563eb';
+  const historyColor = theme === 'dark' ? '#a3a3a3' : '#6b7280';
   const [worker, setWorker] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [history, setHistory] = useState([]);
@@ -24,17 +25,16 @@ export default function AdminWorkerPage() {
   const [error, setError] = useState('');
   const [fitKey, setFitKey] = useState(0);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
-  useEffect(() => {
-    let cancelled = false;
+  const [lastLoaded, setLastLoaded] = useState(null);
 
-    async function load() {
+  const loadWorker = useCallback(
+    async ({ fit = false } = {}) => {
       try {
         const [markersRes, photosRes, historyRes] = await Promise.all([
           api('/api/locations/latest'),
           api(`/api/photos/user/${userId}?limit=100`),
           api(`/api/locations/user/${userId}/history?days=1`),
         ]);
-        if (cancelled) return;
 
         const found = markersRes.markers.find((m) => String(m.user_id) === String(userId));
         const base = {
@@ -46,17 +46,19 @@ export default function AdminWorkerPage() {
         setWorker(base);
         setPhotos(photosRes.photos);
         setHistory(historyRes.points);
-        setFitKey((k) => k + 1);
+        setLastLoaded(new Date());
+        setError('');
+        if (fit) setFitKey((k) => k + 1);
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        setError(err.message);
       }
-    }
+    },
+    [userId]
+  );
 
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
+  useEffect(() => {
+    loadWorker({ fit: true });
+  }, [loadWorker]);
 
   const photosAsc = useMemo(
     () => [...photos].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
@@ -80,22 +82,24 @@ export default function AdminWorkerPage() {
   const displayName = worker?.username || 'Worker';
   const employeeId = worker?.employee_id || userId;
 
+  const subtitle = `${employeeId}${
+    worker?.location_at ? ` · GPS ${formatTimeAmPm(worker.location_at)}` : ''
+  } · ${photos.length} check-in(s)${
+    lastLoaded ? ` · Updated ${formatClock(lastLoaded)}` : ''
+  }`;
+
   return (
     <div className="page admin-page admin-page-full">
       <AdminHeader
         user={user}
-        title={`${displayName}`}
-        subtitle={`${employeeId} · Work status & movement`}
+        title={displayName}
+        subtitle={subtitle}
+        onRefresh={() => loadWorker({ fit: true })}
         onLogout={logout}
         backLink={
           <Link to="/admin" className="back-link">
             ← Dashboard
           </Link>
-        }
-        extraActions={
-          <button type="button" className="btn-admin secondary" onClick={() => setFitKey((k) => k + 1)}>
-            Fit map
-          </button>
         }
       />
 
@@ -103,24 +107,6 @@ export default function AdminWorkerPage() {
 
       <div className="admin-split">
         <section className="admin-split-map">
-          <div className="map-toolbar">
-            <label className="toggle-inline">
-              <input
-                type="checkbox"
-                checked={showMovementHistory}
-                onChange={(e) => {
-                  setShowMovementHistory(e.target.checked);
-                  setFitKey((k) => k + 1);
-                }}
-              />
-              Show movement history (GPS pings)
-            </label>
-            <span className="muted small">
-              {showMovementHistory
-                ? `${history.length} ping(s) today`
-                : `${photosAsc.length} upload marker(s) · dotted = check-in trail`}
-            </span>
-          </div>
           <div className="map-wrap map-wrap-fill map-wrap-admin">
             <AppMap center={center} zoom={13}>
               <FitToPoints points={mapPoints} fitKey={fitKey} />
@@ -138,8 +124,8 @@ export default function AdminWorkerPage() {
                     latitude={p.latitude}
                     longitude={p.longitude}
                     label={`Photo upload · ${formatDateTimeAmPm(p.created_at)}`}
+                    caption={formatTimeAmPm(p.created_at)}
                     thumbSrc={p.filename ? `/uploads/${p.filename}` : CHECKIN_PHOTO_FALLBACK}
-                    tooltip={formatDateTimeAmPm(p.created_at)}
                     onClick={() => setLightboxPhoto(p)}
                   />
                 ))}
@@ -159,6 +145,7 @@ export default function AdminWorkerPage() {
                 <Pin
                   latitude={worker.latitude}
                   longitude={worker.longitude}
+                  caption={worker.username}
                   label={`Last live GPS · ${formatDateTimeAmPm(worker.location_at)}`}
                 />
               )}
@@ -168,54 +155,70 @@ export default function AdminWorkerPage() {
 
         <aside className="admin-split-panel">
           <div className="panel-block">
-            <h3 className="panel-title">Work status</h3>
-            {worker?.location_at && (
-              <p className="status-line">
-                <span className="status-label">Last live GPS</span>
-                <span className="feed-datetime">
-                  <time className="feed-time">{formatTimeAmPm(worker.location_at)}</time>
-                  <span className="feed-date-sep">·</span>
-                  <span className="feed-date">{formatDateShort(worker.location_at)}</span>
-                </span>
-              </p>
-            )}
-            {worker?.last_photo_at ? (
-              <p className="status-line">
-                <span className="status-label">Last photo</span>
-                <span className="feed-datetime">
-                  <time className="feed-time">{formatTimeAmPm(worker.last_photo_at)}</time>
-                  <span className="feed-date-sep">·</span>
-                  <span className="feed-date">{formatDateShort(worker.last_photo_at)}</span>
-                </span>
-              </p>
-            ) : (
-              <p className="muted small">No photo uploads yet.</p>
-            )}
-          </div>
+            <h3 className="panel-title">Check-ins</h3>
 
-          <div className="panel-block">
-            <h3 className="panel-title">Uploaded photos</h3>
-            {photos.length === 0 && <p className="muted">No photos for this worker.</p>}
-            <ul className="photo-list photo-list-panel photo-list-admin">
-              {photos.map((p) => (
-                <li key={p.id}>
-                  <button type="button" className="photo-list-thumb" onClick={() => setLightboxPhoto(p)}>
-                    <img src={`/uploads/${p.filename}`} alt="" />
-                  </button>
-                  <div>
-                    <div className="feed-datetime">
-                      <time className="feed-time">{formatTimeAmPm(p.created_at)}</time>
-                      <span className="feed-date-sep">·</span>
-                      <span className="feed-date">{formatDateShort(p.created_at)}</span>
+            <div className="worker-panel-meta">
+              <div className="worker-map-control">
+                <span className="setting-label">Map view</span>
+                <label className="worker-map-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showMovementHistory}
+                    onChange={(e) => {
+                      setShowMovementHistory(e.target.checked);
+                      setFitKey((k) => k + 1);
+                    }}
+                  />
+                  <span>Show movement history (GPS pings)</span>
+                </label>
+                <p className="panel-caption worker-map-hint">
+                  {showMovementHistory
+                    ? `${history.length} ping(s) today · map shows GPS trail`
+                    : `${photosAsc.length} upload(s) on map · blue line = check-in trail`}
+                </p>
+              </div>
+
+              {(worker?.location_at || worker?.last_photo_at) && (
+                <div className="worker-status-grid" aria-label="Latest worker signals">
+                  {worker?.location_at && (
+                    <div className="worker-status-item">
+                      <span className="status-label">Last live GPS</span>
+                      <div className="feed-datetime">
+                        <time className="feed-time">{formatTimeAmPm(worker.location_at)}</time>
+                        <span className="feed-date-sep">·</span>
+                        <span className="feed-date">{formatDateShort(worker.location_at)}</span>
+                      </div>
                     </div>
-                    <div className="muted small mono">
-                      {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
+                  )}
+                  {worker?.last_photo_at && (
+                    <div className="worker-status-item">
+                      <span className="status-label">Last photo</span>
+                      <div className="feed-datetime">
+                        <time className="feed-time">{formatTimeAmPm(worker.last_photo_at)}</time>
+                        <span className="feed-date-sep">·</span>
+                        <span className="feed-date">{formatDateShort(worker.last_photo_at)}</span>
+                      </div>
                     </div>
-                    {p.comment && <div className="feed-comment">{p.comment}</div>}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {photos.length === 0 ? (
+              <p className="muted">No photos for this worker.</p>
+            ) : (
+              <ul className="feed-list">
+                {photos.map((p) => (
+                  <FeedActivityRow
+                    key={p.id}
+                    upload={p}
+                    workerName={displayName}
+                    employeeId={employeeId}
+                    onSelect={setLightboxPhoto}
+                  />
+                ))}
+              </ul>
+            )}
           </div>
         </aside>
       </div>
@@ -228,7 +231,8 @@ export default function AdminWorkerPage() {
             ? { user_id: worker.user_id, username: worker.username, employee_id: worker.employee_id }
             : null
         }
-        size="square"
+        kicker="Latest check-in photo"
+        size="compact"
         fallbackSrc={CHECKIN_PHOTO_FALLBACK}
         onClose={() => setLightboxPhoto(null)}
       />
