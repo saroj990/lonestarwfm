@@ -141,6 +141,7 @@ export default function AdminMapPage() {
                     latitude={m.latitude}
                     longitude={m.longitude}
                     label={m.username}
+                    caption={m.username}
                     onClick={() => setSelectedId(m.user_id)}
                   />
                 ))}

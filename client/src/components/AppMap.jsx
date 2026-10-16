@@ -75,6 +75,7 @@ export function Pin({
   variant = 'worker',
   onClick,
   label,
+  caption,
   previewSrc,
   previewCaption,
 }) {
@@ -95,7 +96,8 @@ export function Pin({
         onMouseEnter={() => previewSrc && setHover(true)}
         onMouseLeave={() => setHover(false)}
       >
-        <button type="button" className={`map-pin map-pin-${variant}`} aria-label={label} />
+        <button type="button" className={`map-pin map-pin-${variant}`} aria-label={label || caption} />
+        {caption && <span className="map-pin-caption">{caption}</span>}
         {previewSrc && hover && (
           <div className="map-pin-preview" role="tooltip">
             <img src={previewSrc} alt="" />
