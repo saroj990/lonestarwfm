@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Map, { Layer, Marker, NavigationControl, Source, useMap } from 'react-map-gl/maplibre';
 import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
@@ -68,8 +68,18 @@ export function FitToPoints({ points, fitKey, maxZoom = 16 }) {
   return null;
 }
 
-/** Teardrop pin; variant: 'worker' | 'photo' | 'ping'. */
-export function Pin({ latitude, longitude, variant = 'worker', onClick, label }) {
+/** Teardrop pin; variant: 'worker' | 'photo' | 'ping'. Optional previewSrc shows image on hover. */
+export function Pin({
+  latitude,
+  longitude,
+  variant = 'worker',
+  onClick,
+  label,
+  previewSrc,
+  previewCaption,
+}) {
+  const [hover, setHover] = useState(false);
+
   return (
     <Marker
       latitude={latitude}
@@ -80,7 +90,19 @@ export function Pin({ latitude, longitude, variant = 'worker', onClick, label })
         onClick?.();
       }}
     >
-      <button type="button" className={`map-pin map-pin-${variant}`} aria-label={label} />
+      <div
+        className="map-pin-wrap"
+        onMouseEnter={() => previewSrc && setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        <button type="button" className={`map-pin map-pin-${variant}`} aria-label={label} />
+        {previewSrc && hover && (
+          <div className="map-pin-preview" role="tooltip">
+            <img src={previewSrc} alt="" />
+            {previewCaption && <span className="map-pin-preview-caption">{previewCaption}</span>}
+          </div>
+        )}
+      </div>
     </Marker>
   );
 }

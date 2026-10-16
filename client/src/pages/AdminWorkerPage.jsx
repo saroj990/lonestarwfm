@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Popup } from 'react-map-gl/maplibre';
 import AppMap, { FitToPoints, Pin, TrailLine } from '../components/AppMap';
 import { useTheme } from '../theme';
 import { useAuth } from '../auth';
@@ -22,8 +21,6 @@ export default function AdminWorkerPage() {
   const [showMovementHistory, setShowMovementHistory] = useState(false);
   const [error, setError] = useState('');
   const [fitKey, setFitKey] = useState(0);
-  const [popup, setPopup] = useState(null);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -110,7 +107,6 @@ export default function AdminWorkerPage() {
                 checked={showMovementHistory}
                 onChange={(e) => {
                   setShowMovementHistory(e.target.checked);
-                  setPopup(null);
                   setFitKey((k) => k + 1);
                 }}
               />
@@ -139,10 +135,9 @@ export default function AdminWorkerPage() {
                     latitude={p.latitude}
                     longitude={p.longitude}
                     variant="photo"
-                    label="Photo upload"
-                    onClick={() =>
-                      setPopup({ ...p, title: `Upload · ${formatDateTimeAmPm(p.created_at)}`, offset: 30 })
-                    }
+                    label={`Photo upload · ${formatDateTimeAmPm(p.created_at)}`}
+                    previewSrc={`/uploads/${p.filename}`}
+                    previewCaption={formatDateTimeAmPm(p.created_at)}
                   />
                 ))}
 
@@ -153,10 +148,7 @@ export default function AdminWorkerPage() {
                     latitude={p.latitude}
                     longitude={p.longitude}
                     variant="ping"
-                    label="GPS ping"
-                    onClick={() =>
-                      setPopup({ ...p, title: `GPS · ${formatDateTimeAmPm(p.created_at)}`, offset: 10 })
-                    }
+                    label={`GPS ping · ${formatDateTimeAmPm(p.created_at)}`}
                   />
                 ))}
 
@@ -164,32 +156,8 @@ export default function AdminWorkerPage() {
                 <Pin
                   latitude={worker.latitude}
                   longitude={worker.longitude}
-                  label="Last live GPS"
-                  onClick={() =>
-                    setPopup({
-                      ...worker,
-                      title: `Last live GPS · ${formatDateTimeAmPm(worker.location_at)}`,
-                      offset: 34,
-                    })
-                  }
+                  label={`Last live GPS · ${formatDateTimeAmPm(worker.location_at)}`}
                 />
-              )}
-
-              {popup && (
-                <Popup
-                  latitude={popup.latitude}
-                  longitude={popup.longitude}
-                  offset={popup.offset}
-                  onClose={() => setPopup(null)}
-                >
-                  {popup.title}
-                  {popup.comment && (
-                    <>
-                      <br />
-                      {popup.comment}
-                    </>
-                  )}
-                </Popup>
               )}
             </AppMap>
           </div>

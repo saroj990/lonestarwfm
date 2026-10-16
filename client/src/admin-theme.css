@@ -792,9 +792,51 @@ body.theme-admin .region-badge {
 
 body.theme-admin .map-wrap-admin {
   border-color: var(--line);
+  overflow: visible;
 }
 
 /* ---------- Map (MapLibre) ---------- */
+
+.map-pin-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.map-pin-preview {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: 140px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.map-pin-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+  filter: none;
+}
+
+.map-pin-preview-caption {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+}
 
 .map-pin {
   display: block;
