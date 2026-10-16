@@ -257,6 +257,12 @@ a {
   margin-bottom: 14px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -285,15 +291,16 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px;
-  background: #fbfcfb;
+  background: var(--card, #fbfcfb);
+  color: var(--ink);
 }
 
 button {
   border: none;
   border-radius: 10px;
   padding: 12px 14px;
-  background: var(--brand);
-  color: white;
+  background: var(--accent, var(--brand));
+  color: var(--accent-ink, white);
   cursor: pointer;
   width: 100%;
 }
@@ -305,7 +312,7 @@ button:disabled {
 
 button.ghost {
   background: transparent;
-  color: var(--brand);
+  color: var(--ink);
   border: 1px solid var(--line);
   width: auto;
 }

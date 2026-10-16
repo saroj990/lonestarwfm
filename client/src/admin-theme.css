@@ -1,47 +1,61 @@
-/* Monochrome admin + login, with dark / light variants (body[data-theme]) */
+/* App-wide light / dark theme (ThemeProvider sets body[data-theme]) */
 
-body.theme-admin,
-body.login-pro {
+body[data-theme='dark'] {
   --bg: #0b0b0b;
   --bg-accent: #171717;
-  --card: #121212;
+  --card: #141414;
   --ink: #f5f5f5;
-  --soft-ink: #d4d4d4;
-  --muted: #9ca3af;
-  --line: #2a2a2a;
-  --accent: #ffffff;
-  --accent-ink: #0a0a0a;
-  --brand: #ffffff;
-  --brand-2: #e5e5e5;
-  --danger: #fca5a5;
+  --soft-ink: #e5e5e5;
+  --muted: #a3a3a3;
+  --line: #2e2e2e;
+  --accent: #3b82f6;
+  --accent-ink: #ffffff;
+  --link: #60a5fa;
+  --brand: #3b82f6;
+  --brand-2: #60a5fa;
+  --danger: #f87171;
   --danger-bg: #2a1414;
-  --ok: #d4d4d4;
+  --ok: #4ade80;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  --radius: 14px;
+}
+
+body[data-theme='light'] {
+  --bg: #f4f4f5;
+  --bg-accent: #fafafa;
+  --card: #ffffff;
+  --ink: #111827;
+  --soft-ink: #374151;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #2563eb;
+  --accent-ink: #ffffff;
+  --link: #2563eb;
+  --brand: #1d4ed8;
+  --brand-2: #2563eb;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --ok: #16a34a;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.08);
+  --radius: 14px;
+}
+
+body[data-theme='dark'],
+body[data-theme='light'] {
   background: var(--bg);
   color: var(--ink);
 }
 
-body.theme-admin[data-theme='light'],
-body.login-pro[data-theme='light'] {
-  --bg: #f4f4f5;
-  --bg-accent: #fafafa;
-  --card: #ffffff;
-  --ink: #0a0a0a;
-  --soft-ink: #3f3f46;
-  --muted: #6b7280;
-  --line: #e4e4e7;
-  --accent: #0a0a0a;
-  --accent-ink: #ffffff;
-  --brand: #0a0a0a;
-  --brand-2: #27272a;
-  --danger: #b91c1c;
-  --danger-bg: #fef2f2;
-  --ok: #15803d;
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.08);
+body.theme-admin,
+body.login-pro {
+  background: var(--bg);
+  color: var(--ink);
 }
 
+body[data-theme='dark'] a,
+body[data-theme='light'] a,
 body.theme-admin a {
-  color: var(--brand-2);
+  color: var(--link);
 }
 
 /* ---------- Theme toggle ---------- */
@@ -86,7 +100,6 @@ body.theme-admin a {
   height: 100%;
   object-fit: cover;
   object-position: 70% center;
-  filter: grayscale(100%);
 }
 
 .login-visual-overlay {
@@ -197,7 +210,6 @@ body.theme-admin a {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  filter: grayscale(100%);
 }
 
 .login-gallery figcaption {
@@ -716,7 +728,7 @@ body.theme-admin .feed-item img {
   width: 64px;
   height: 64px;
   border-radius: 8px;
-  filter: grayscale(100%);
+  object-fit: cover;
 }
 
 .feed-body {
@@ -851,6 +863,230 @@ body.theme-admin .map-wrap-admin {
   filter: none;
 }
 
+.map-pin-preview--sm {
+  width: 88px;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.map-pin-preview--sm img {
+  max-height: 64px;
+}
+
+.map-pin-preview--sm .map-pin-preview-caption {
+  margin-top: 4px;
+  font-size: 0.65rem;
+}
+
+.map-pin-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  max-width: 160px;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---------- Photo lightbox ---------- */
+
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.photo-lightbox-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  max-height: min(92vh, 100%);
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.photo-lightbox-panel-compact {
+  width: min(400px, calc(100vw - 32px));
+}
+
+.photo-lightbox-panel-square {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.photo-lightbox-panel-square .photo-lightbox-media {
+  padding: 0 14px 14px;
+  aspect-ratio: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.photo-lightbox-panel-square .photo-lightbox-img {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.photo-lightbox-fallback-note {
+  margin: 8px 0 0;
+  text-align: center;
+}
+
+.photo-lightbox-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.photo-lightbox-head-text {
+  min-width: 0;
+}
+
+.photo-lightbox-id {
+  margin-top: 2px;
+}
+
+.photo-lightbox-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-accent);
+  color: var(--ink);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.photo-lightbox-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px 0;
+  background: #0a0a0a;
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.photo-lightbox-panel-compact .photo-lightbox-media {
+  padding-top: 10px;
+}
+
+.photo-lightbox-img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: min(72vh, 720px);
+  margin: 0 auto;
+  object-fit: contain;
+  filter: none;
+}
+
+.photo-lightbox-panel-compact .photo-lightbox-img {
+  max-height: min(42vh, 280px);
+}
+
+.photo-lightbox-empty {
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.photo-lightbox-meta {
+  padding: 12px 14px 16px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.photo-lightbox-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.photo-lightbox-kicker {
+  margin-top: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.photo-lightbox-line {
+  margin-top: 6px;
+}
+
+.photo-lightbox-comment {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.photo-lightbox-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--link);
+}
+
+body[data-theme='dark'] .feed-title a,
+body[data-theme='light'] .feed-title a {
+  color: var(--link);
+}
+
+.photo-list-thumb {
+  display: block;
+  width: 72px;
+  height: 72px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: transparent;
+}
+
+.photo-list-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: none;
+}
+
 .map-pin-preview-caption {
   display: block;
   margin-top: 6px;
@@ -895,6 +1131,29 @@ body.theme-admin .map-wrap-admin {
   width: 18px;
   height: 18px;
   background: #16a34a;
+}
+
+.map-pin-thumb {
+  display: block;
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 7px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.map-pin-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: none;
 }
 
 .map-pin-ping {
@@ -1011,7 +1270,7 @@ body.theme-admin .photo-list-admin li {
 }
 
 body.theme-admin .photo-list-admin img {
-  filter: grayscale(100%);
+  object-fit: cover;
 }
 
 body.theme-admin .mono {
@@ -1073,7 +1332,6 @@ body.theme-admin .mono {
     height: 100%;
     object-fit: cover;
     object-position: 70% 30%;
-    filter: grayscale(100%);
   }
 
   .login-mobile-banner-text {

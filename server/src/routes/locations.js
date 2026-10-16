@@ -36,10 +36,17 @@ router.get('/latest', requireAuth, requireRole('admin', 'manager'), (_req, res) 
          l.longitude,
          l.created_at AS location_at,
          (SELECT COUNT(*) FROM photos p WHERE p.user_id = u.id) AS photo_count,
-         (SELECT MAX(p.created_at) FROM photos p WHERE p.user_id = u.id) AS last_photo_at
+         lp.created_at AS last_photo_at,
+         lp.filename AS last_photo_filename,
+         lp.latitude AS last_photo_latitude,
+         lp.longitude AS last_photo_longitude,
+         lp.comment AS last_photo_comment
        FROM users u
        JOIN locations l ON l.id = (
          SELECT id FROM locations WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
+       )
+       LEFT JOIN photos lp ON lp.id = (
+         SELECT id FROM photos WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
        )
        WHERE u.employee_type = 'worker'
        ORDER BY l.created_at DESC`

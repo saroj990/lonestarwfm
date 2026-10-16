@@ -78,14 +78,19 @@ export function Pin({
   caption,
   previewSrc,
   previewCaption,
+  previewSize = 'md',
+  tooltip,
+  thumbSrc,
 }) {
   const [hover, setHover] = useState(false);
+  const showHover = Boolean(previewSrc || tooltip);
+  const anchor = thumbSrc || variant === 'ping' ? 'center' : 'bottom';
 
   return (
     <Marker
       latitude={latitude}
       longitude={longitude}
-      anchor={variant === 'ping' ? 'center' : 'bottom'}
+      anchor={anchor}
       onClick={(e) => {
         e.originalEvent.stopPropagation();
         onClick?.();
@@ -93,13 +98,43 @@ export function Pin({
     >
       <div
         className="map-pin-wrap"
-        onMouseEnter={() => previewSrc && setHover(true)}
+        onMouseEnter={() => showHover && setHover(true)}
         onMouseLeave={() => setHover(false)}
       >
-        <button type="button" className={`map-pin map-pin-${variant}`} aria-label={label || caption} />
+        {thumbSrc ? (
+          <button
+            type="button"
+            className="map-pin-thumb"
+            aria-label={label || caption}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+          >
+            <img src={thumbSrc} alt="" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`map-pin map-pin-${variant}`}
+            aria-label={label || caption}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+          />
+        )}
         {caption && <span className="map-pin-caption">{caption}</span>}
+        {tooltip && hover && !previewSrc && (
+          <span className="map-pin-tooltip" role="tooltip">
+            {tooltip}
+          </span>
+        )}
         {previewSrc && hover && (
-          <div className="map-pin-preview" role="tooltip">
+          <div
+            className={`map-pin-preview map-pin-preview--${previewSize}`}
+            role="tooltip"
+          >
             <img src={previewSrc} alt="" />
             {previewCaption && <span className="map-pin-preview-caption">{previewCaption}</span>}
           </div>

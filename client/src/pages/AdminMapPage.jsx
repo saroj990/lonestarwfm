@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { REGION_FILTERS, matchesRegionFilter } from '../adminRegions';
-import { Link } from 'react-router-dom';
-import { Popup } from 'react-map-gl/maplibre';
 import AppMap, { FitToPoints, Pin } from '../components/AppMap';
+import PhotoLightbox from '../components/PhotoLightbox';
 import { useAuth } from '../auth';
 import { api } from '../api';
 import AdminHeader from '../components/AdminHeader';
 import AdminSettingsPanel from '../components/AdminSettingsPanel';
 import FeedActivityRow from '../components/FeedActivityRow';
-import { formatClock, formatDateTimeAmPm } from '../formatDateTime';
+import { formatClock } from '../formatDateTime';
 
 const DEFAULT_CENTER = [24.4672, 39.6112];
 
@@ -22,7 +21,7 @@ export default function AdminMapPage() {
   const [fitKey, setFitKey] = useState(0);
   const [lastRefreshed, setLastRefreshed] = useState(null);
   const [regionFilter, setRegionFilter] = useState('all');
-  const [selectedId, setSelectedId] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
@@ -89,8 +88,6 @@ export default function AdminMapPage() {
     }
   }
 
-  const selected = filteredMarkers.find((m) => m.user_id === selectedId);
-
   const center =
     filteredMarkers.length > 0
       ? [filteredMarkers[0].latitude, filteredMarkers[0].longitude]
@@ -142,27 +139,27 @@ export default function AdminMapPage() {
                     longitude={m.longitude}
                     label={m.username}
                     caption={m.username}
-                    onClick={() => setSelectedId(m.user_id)}
+                    onClick={() =>
+                      setLightbox({
+                        worker: {
+                          user_id: m.user_id,
+                          username: m.username,
+                          employee_id: m.employee_id,
+                          location_at: m.location_at,
+                        },
+                        photo: m.last_photo_filename
+                          ? {
+                              filename: m.last_photo_filename,
+                              created_at: m.last_photo_at,
+                              latitude: m.last_photo_latitude,
+                              longitude: m.last_photo_longitude,
+                              comment: m.last_photo_comment,
+                            }
+                          : null,
+                      })
+                    }
                   />
                 ))}
-                {selected && (
-                  <Popup
-                    latitude={selected.latitude}
-                    longitude={selected.longitude}
-                    offset={34}
-                    onClose={() => setSelectedId(null)}
-                  >
-                    <strong>{selected.username}</strong>
-                    <br />
-                    {selected.employee_id}
-                    <br />
-                    Live GPS: {formatDateTimeAmPm(selected.location_at)}
-                    <br />
-                    Last photo: {formatDateTimeAmPm(selected.last_photo_at)}
-                    <br />
-                    <Link to={`/admin/worker/${selected.user_id}`}>View worker →</Link>
-                  </Popup>
-                )}
               </AppMap>
             )}
           </div>
@@ -199,6 +196,15 @@ export default function AdminMapPage() {
           </div>
         </aside>
       </div>
+
+      <PhotoLightbox
+        open={lightbox != null}
+        photo={lightbox?.photo}
+        worker={lightbox?.worker}
+        kicker="Latest check-in photo"
+        size="compact"
+        onClose={() => setLightbox(null)}
+      />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { useTheme } from '../theme';
 import { useAuth } from '../auth';
 import { api } from '../api';
 import AdminHeader from '../components/AdminHeader';
+import PhotoLightbox from '../components/PhotoLightbox';
+import { CHECKIN_PHOTO_FALLBACK } from '../photoFallback';
 import { formatDateShort, formatDateTimeAmPm, formatTimeAmPm } from '../formatDateTime';
 
 const DEFAULT_CENTER = [24.4672, 39.6112];
@@ -21,6 +23,7 @@ export default function AdminWorkerPage() {
   const [showMovementHistory, setShowMovementHistory] = useState(false);
   const [error, setError] = useState('');
   const [fitKey, setFitKey] = useState(0);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
   useEffect(() => {
     let cancelled = false;
 
@@ -134,10 +137,10 @@ export default function AdminWorkerPage() {
                     key={p.id}
                     latitude={p.latitude}
                     longitude={p.longitude}
-                    variant="photo"
                     label={`Photo upload · ${formatDateTimeAmPm(p.created_at)}`}
-                    previewSrc={`/uploads/${p.filename}`}
-                    previewCaption={formatDateTimeAmPm(p.created_at)}
+                    thumbSrc={p.filename ? `/uploads/${p.filename}` : CHECKIN_PHOTO_FALLBACK}
+                    tooltip={formatDateTimeAmPm(p.created_at)}
+                    onClick={() => setLightboxPhoto(p)}
                   />
                 ))}
 
@@ -196,7 +199,9 @@ export default function AdminWorkerPage() {
             <ul className="photo-list photo-list-panel photo-list-admin">
               {photos.map((p) => (
                 <li key={p.id}>
-                  <img src={`/uploads/${p.filename}`} alt="" />
+                  <button type="button" className="photo-list-thumb" onClick={() => setLightboxPhoto(p)}>
+                    <img src={`/uploads/${p.filename}`} alt="" />
+                  </button>
                   <div>
                     <div className="feed-datetime">
                       <time className="feed-time">{formatTimeAmPm(p.created_at)}</time>
@@ -214,6 +219,19 @@ export default function AdminWorkerPage() {
           </div>
         </aside>
       </div>
+
+      <PhotoLightbox
+        open={lightboxPhoto != null}
+        photo={lightboxPhoto}
+        worker={
+          worker
+            ? { user_id: worker.user_id, username: worker.username, employee_id: worker.employee_id }
+            : null
+        }
+        size="square"
+        fallbackSrc={CHECKIN_PHOTO_FALLBACK}
+        onClose={() => setLightboxPhoto(null)}
+      />
     </div>
   );
 }
