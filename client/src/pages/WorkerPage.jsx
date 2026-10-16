@@ -3,6 +3,7 @@ import AppMap, { FocusOnLocation, Pin } from '../components/AppMap';
 import { useAuth } from '../auth';
 import { api } from '../api';
 import { useGpsPing } from '../hooks/useGpsPing';
+import ThemeToggle from '../components/ThemeToggle';
 
 const DEFAULT_MAP_CENTER = [24.4672, 39.6112];
 
@@ -200,9 +201,12 @@ export default function WorkerPage() {
             {user.username} · {user.employee_id}
           </div>
         </div>
-        <button className="ghost" onClick={logout}>
-          Logout
-        </button>
+        <div className="topbar-actions">
+          <ThemeToggle />
+          <button className="ghost" onClick={logout}>
+            Logout
+          </button>
+        </div>
       </header>
 
       <section className="map-wrap map-wrap-worker">

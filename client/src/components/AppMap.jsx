@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Map, { Layer, Marker, NavigationControl, Source, useMap } from 'react-map-gl/maplibre';
 import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
@@ -68,19 +68,78 @@ export function FitToPoints({ points, fitKey, maxZoom = 16 }) {
   return null;
 }
 
-/** Teardrop pin; variant: 'worker' | 'photo' | 'ping'. */
-export function Pin({ latitude, longitude, variant = 'worker', onClick, label }) {
+/** Teardrop pin; variant: 'worker' | 'photo' | 'ping'. Optional previewSrc shows image on hover. */
+export function Pin({
+  latitude,
+  longitude,
+  variant = 'worker',
+  onClick,
+  label,
+  caption,
+  previewSrc,
+  previewCaption,
+  previewSize = 'md',
+  tooltip,
+  thumbSrc,
+}) {
+  const [hover, setHover] = useState(false);
+  const showHover = Boolean(previewSrc || tooltip);
+  const anchor = thumbSrc || variant === 'ping' ? 'center' : 'bottom';
+
   return (
     <Marker
       latitude={latitude}
       longitude={longitude}
-      anchor={variant === 'ping' ? 'center' : 'bottom'}
+      anchor={anchor}
       onClick={(e) => {
         e.originalEvent.stopPropagation();
         onClick?.();
       }}
     >
-      <button type="button" className={`map-pin map-pin-${variant}`} aria-label={label} />
+      <div
+        className="map-pin-wrap"
+        onMouseEnter={() => showHover && setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        {thumbSrc ? (
+          <button
+            type="button"
+            className="map-pin-thumb"
+            aria-label={label || caption}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+          >
+            <img src={thumbSrc} alt="" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`map-pin map-pin-${variant}`}
+            aria-label={label || caption}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+          />
+        )}
+        {caption && <span className="map-pin-caption">{caption}</span>}
+        {tooltip && hover && !previewSrc && (
+          <span className="map-pin-tooltip" role="tooltip">
+            {tooltip}
+          </span>
+        )}
+        {previewSrc && hover && (
+          <div
+            className={`map-pin-preview map-pin-preview--${previewSize}`}
+            role="tooltip"
+          >
+            <img src={previewSrc} alt="" />
+            {previewCaption && <span className="map-pin-preview-caption">{previewCaption}</span>}
+          </div>
+        )}
+      </div>
     </Marker>
   );
 }
