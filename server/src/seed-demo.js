@@ -15,7 +15,12 @@ import {
 } from './geo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SEED_PHOTO_SOURCE = path.join(__dirname, '..', '..', 'client', 'public', 'login', 'login-team.jpg');
+const SEED_ASSETS_DIR = path.join(__dirname, '..', 'seed-assets');
+const SEED_PHOTO_SOURCES = [
+  path.join(SEED_ASSETS_DIR, 'checkin-primary.jpg'),
+  path.join(SEED_ASSETS_DIR, 'checkin-worker.jpg'),
+  path.join(SEED_ASSETS_DIR, 'checkin-site.jpg'),
+];
 
 const DEMO_PASSWORD = 'worker123';
 const WORKER_COUNT = 20;
@@ -45,12 +50,13 @@ const MINIMAL_JPEG = Buffer.from(
 
 function ensureSharedPhoto() {
   const dest = path.join(uploadDir, SHARED_FILENAME);
-  if (fs.existsSync(SEED_PHOTO_SOURCE)) {
-    fs.copyFileSync(SEED_PHOTO_SOURCE, dest);
+  const source = SEED_PHOTO_SOURCES.find((p) => fs.existsSync(p));
+  if (source) {
+    fs.copyFileSync(source, dest);
   } else {
     fs.writeFileSync(dest, MINIMAL_JPEG);
   }
-  console.log(`Shared photo ${dest}`);
+  console.log(`Shared photo ${dest}${source ? ` (from ${path.basename(source)})` : ' (minimal placeholder)'}`);
   return SHARED_FILENAME;
 }
 
