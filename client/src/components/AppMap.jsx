@@ -1,31 +1,51 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Map, { Layer, Marker, NavigationControl, Source, useMap } from 'react-map-gl/maplibre';
 import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useTheme } from '../theme';
+import { MAP_STYLE_STORAGE_KEY, resolveMapStyle } from '../mapStyles';
+import MapStyleControl from './MapStyleControl';
 
 // MapLibre resolves its worker relative to its own module URL, which Vite's bundling breaks.
 setWorkerUrl(workerUrl);
 
-const STYLES = {
-  dark: 'https://tiles.openfreemap.org/styles/dark',
-  light: 'https://tiles.openfreemap.org/styles/positron',
-};
+function readStoredStyleId() {
+  try {
+    const v = localStorage.getItem(MAP_STYLE_STORAGE_KEY);
+    return v || 'auto';
+  } catch {
+    return 'auto';
+  }
+}
 
-/** Keyless OpenFreeMap vector basemap that follows the app theme. */
+/** MapLibre map with basemap style picker (top-right). */
 export default function AppMap({ center, zoom = 12, children }) {
   const { theme } = useTheme();
+  const [styleId, setStyleId] = useState(readStoredStyleId);
+  const mapStyle = useMemo(() => resolveMapStyle(styleId, theme), [styleId, theme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MAP_STYLE_STORAGE_KEY, styleId);
+    } catch {
+      /* ignore */
+    }
+  }, [styleId]);
+
   return (
-    <Map
-      initialViewState={{ latitude: center[0], longitude: center[1], zoom }}
-      mapStyle={STYLES[theme] || STYLES.dark}
-      style={{ width: '100%', height: '100%' }}
-      maxZoom={18}
-    >
-      <NavigationControl position="top-left" showCompass={false} />
-      {children}
-    </Map>
+    <div className="app-map-shell">
+      <Map
+        initialViewState={{ latitude: center[0], longitude: center[1], zoom }}
+        mapStyle={mapStyle}
+        style={{ width: '100%', height: '100%' }}
+        maxZoom={19}
+      >
+        <NavigationControl position="top-left" showCompass={false} />
+        {children}
+      </Map>
+      <MapStyleControl value={styleId} onChange={setStyleId} />
+    </div>
   );
 }
 
